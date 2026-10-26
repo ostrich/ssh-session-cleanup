@@ -9,7 +9,7 @@ ifeq ($(strip $(UNITDIR)),)
 UNITDIR := $(PREFIX)/lib/systemd/system
 endif
 
-.PHONY: all install check
+.PHONY: all install uninstall check
 all:
 
 check:
@@ -22,4 +22,10 @@ install:
 	install -Dm644 ssh-session-cleanup.service "$(DESTDIR)$(UNITDIR)/ssh-session-cleanup.service"
 	sed -i -e 's|^ExecStop=.*|ExecStop=$(LIBEXECDIR)/ssh-session-cleanup|' \
 	    -e 's|^Documentation=.*|Documentation=file:$(DOCDIR)/README.md|' \
+	    "$(DESTDIR)$(UNITDIR)/ssh-session-cleanup.service"
+
+uninstall:
+	rm -f "$(DESTDIR)$(LIBEXECDIR)/ssh-session-cleanup" \
+	    "$(DESTDIR)$(DOCDIR)/README.md" \
+	    "$(DESTDIR)$(LICENSEDIR)/LICENSE" \
 	    "$(DESTDIR)$(UNITDIR)/ssh-session-cleanup.service"

@@ -36,6 +36,20 @@ sudo systemctl disable ssh-session-cleanup.service
 
 The currently armed hook still runs at the next shutdown.
 
+## Uninstall a source installation
+
+Disable the service as above, then reboot before removing its files so the
+armed shutdown hook can finish. After reboot:
+
+```sh
+sudo make uninstall
+sudo systemctl daemon-reload
+```
+
+Use the same path overrides as installation. `make uninstall` only removes
+installed files; it does not stop or disable the service. For packaged installs,
+use the package manager instead.
+
 ## How it works
 
 Sends SIGTERM to authenticated OpenSSH connections, including terminals, remote
