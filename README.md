@@ -56,6 +56,10 @@ Sends SIGTERM to authenticated OpenSSH connections, including terminals, remote
 commands, file transfers and forwarding. Uses Linux pidfds to avoid PID reuse
 races and waits up to five seconds; never sends SIGKILL.
 
+Interactive SSH terminals receive a best-effort notice before disconnection:
+“System is shutting down or rebooting. Your SSH connection will close now.”
+Noninteractive connections receive no terminal message; dry runs send no notice.
+
 Requires Linux with pidfds, Python 3.9+, systemd and root access. Ordering is
 configured for `sshd.service`, `sshd.socket`, `ssh.service` and `ssh.socket`;
 other unit names need a local drop-in. Network teardown must honor `network.target`.

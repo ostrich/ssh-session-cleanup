@@ -14,6 +14,7 @@ import time
 # may list several terminals. Exclude bracketed listener/authentication titles.
 TITLE = re.compile(rb"sshd(?:-session)?: [^\s@\[\]]+(?:@(?:pts/[0-9]+(?:,pts/[0-9]+)*|notty))?")
 EXECUTABLES = {"sshd", "sshd-session"}
+NOTICE = b"\r\nSystem is shutting down or rebooting. Your SSH connection will close now.\r\n"
 
 
 def is_session(executable, command):
@@ -31,8 +32,9 @@ def sessions():
             # Pin the process before inspecting it, so PID reuse cannot redirect
             # the signal between inspection and delivery.
             fd = os.pidfd_open(int(entry.name))
-            if is_session(os.readlink(entry / "exe"), (entry / "cmdline").read_bytes()):
-                yield int(entry.name), fd
+            command = (entry / "cmdline").read_bytes()
+            if is_session(os.readlink(entry / "exe"), command):
+                yield int(entry.name), fd, command
         except (FileNotFoundError, ProcessLookupError, PermissionError):
             continue
         finally:
@@ -40,22 +42,56 @@ def sessions():
                 os.close(fd)
 
 
+def notify(command, seen):
+    """Best-effort, nonblocking notice to each interactive terminal once."""
+    title = command.split(b"\0", 1)[0]
+    if not TITLE.fullmatch(title):
+        return False
+    terminals = title.rpartition(b"@")[2].split(b",")
+    delivered = False
+    for terminal in terminals:
+        if not re.fullmatch(rb"pts/[0-9]+", terminal) or terminal in seen:
+            continue
+        seen.add(terminal)
+        fd = None
+        try:
+            fd = os.open(b"/dev/" + terminal,
+                         os.O_WRONLY | os.O_NONBLOCK | os.O_NOCTTY | os.O_NOFOLLOW | os.O_CLOEXEC)
+            delivered |= os.write(fd, NOTICE) > 0
+        except OSError:
+            # A closed terminal or full output queue must not block shutdown.
+            pass
+        finally:
+            if fd is not None:
+                os.close(fd)
+    return delivered
+
+
 def cleanup(dry_run=False, timeout=5.0):
     pending = select.poll()
     handles = []
     try:
-        for pid, fd in sessions():
+        targets = []
+        seen = set()
+        notified = False
+        for pid, fd, command in sessions():
             if dry_run:
                 print(f"Would send SIGTERM to OpenSSH session {pid}", flush=True)
                 continue
+            retained = os.dup(fd)
+            handles.append(retained)
+            targets.append((pid, retained))
+            notified |= notify(command, seen)
+        if notified:
+            # Give sshd a brief chance to forward terminal output before exit.
+            time.sleep(0.2)
+        for pid, fd in targets:
             try:
                 signal.pidfd_send_signal(fd, signal.SIGTERM)
             except ProcessLookupError:
                 continue
             print(f"Sent SIGTERM to OpenSSH session {pid}", flush=True)
-            retained = os.dup(fd)
-            handles.append(retained)
-            pending.register(retained, select.POLLIN)
+            pending.register(fd, select.POLLIN)
         remaining = set(handles)
         deadline = time.monotonic() + timeout
         while remaining:
