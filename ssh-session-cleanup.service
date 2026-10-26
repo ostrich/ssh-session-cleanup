@@ -3,7 +3,7 @@ Description=Disconnect OpenSSH sessions before network shutdown
 Documentation=file:/usr/share/doc/ssh-session-cleanup/README.md
 After=network.target
 # Stop listeners first, then existing connections, then networking.
-Before=sshd.service sshd.socket
+Before=sshd.service sshd.socket ssh.service ssh.socket
 RefuseManualStop=yes
 
 [Service]
