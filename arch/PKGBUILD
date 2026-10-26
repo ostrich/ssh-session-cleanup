@@ -3,24 +3,23 @@ pkgname=ssh-session-cleanup
 pkgver=1.0.0
 pkgrel=1
 pkgdesc='Disconnect OpenSSH sessions before networking stops at shutdown'
+url='https://github.com/ostrich/ssh-session-cleanup'
 arch=('any')
 license=('GPL-3.0-or-later')
 depends=('openssh' 'python' 'systemd')
-# Local sources: build with makepkg from this directory in the checkout.
-source=('ssh-session-cleanup' 'ssh-session-cleanup.service' 'README.md' 'LICENSE')
-sha256sums=('f25d06a8d3faabedbdf39f4401c5d7a1f52d5780b2be139c682ae0578812af35'
-            'a460701197def88ba7df8175212b8041fb27361a1e0b14e82157397e8d164bb0'
-            'e1484ebe9f2a88db925f0358adbd8a3f718531a2a2ad790020ecb8b3eb490c50'
-            'fb981668c18a279e285fc4d83fba1e836cc84dd4daa73c9697d3cfd2d8aca6e0')
+_commit=4b6e0f7b5f46d97328a04cc81a0ccdad73881096
+source=("$pkgname-$pkgver.tar.gz::$url/archive/$_commit.tar.gz")
+sha256sums=('adeb36f3d0b8993363756f2867d0f6ab5882ad38d866bf49edae4104cc9d059f')
 
 check() {
-    cd "$startdir/.."
+    cd "$srcdir/$pkgname-$_commit"
     python -m unittest discover -s tests -v
 }
 
 package() {
-    install -Dm755 "$srcdir/ssh-session-cleanup" "$pkgdir/usr/lib/$pkgname/ssh-session-cleanup"
-    install -Dm644 "$srcdir/ssh-session-cleanup.service" "$pkgdir/usr/lib/systemd/system/$pkgname.service"
-    install -Dm644 "$srcdir/README.md" "$pkgdir/usr/share/doc/$pkgname/README.md"
-    install -Dm644 "$srcdir/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+    cd "$srcdir/$pkgname-$_commit"
+    install -Dm755 "ssh-session-cleanup" "$pkgdir/usr/lib/$pkgname/ssh-session-cleanup"
+    install -Dm644 "ssh-session-cleanup.service" "$pkgdir/usr/lib/systemd/system/$pkgname.service"
+    install -Dm644 "README.md" "$pkgdir/usr/share/doc/$pkgname/README.md"
+    install -Dm644 "LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }
