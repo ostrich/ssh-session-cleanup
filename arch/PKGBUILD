@@ -26,8 +26,7 @@ check() {
 
 package() {
     cd "$srcdir/$_pkgname"
-    install -Dm755 "ssh-session-cleanup" "$pkgdir/usr/lib/$_pkgname/ssh-session-cleanup"
-    install -Dm644 "ssh-session-cleanup.service" "$pkgdir/usr/lib/systemd/system/$_pkgname.service"
-    install -Dm644 "README.md" "$pkgdir/usr/share/doc/$_pkgname/README.md"
-    install -Dm644 "LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+    make install DESTDIR="$pkgdir" PREFIX=/usr \
+        UNITDIR=/usr/lib/systemd/system \
+        LICENSEDIR="/usr/share/licenses/$pkgname"
 }
