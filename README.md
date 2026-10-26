@@ -78,4 +78,4 @@ Run tests (no reboot or live SSH disconnection):
 python -m unittest discover -s tests -v
 ```
 
-Licensed under [GPL-3.0-or-later](LICENSE).
+Licensed under [MIT](LICENSE).
