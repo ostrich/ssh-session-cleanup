@@ -1,0 +1,5 @@
+__pycache__/
+/arch/src/
+/arch/pkg/
+/arch/*.pkg.tar.*
+/arch/*.src.tar.*

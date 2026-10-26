@@ -1,0 +1,84 @@
+#!/usr/bin/python3
+"""Disconnect authenticated OpenSSH connections before network shutdown."""
+
+import argparse
+import os
+from pathlib import Path
+import re
+import select
+import signal
+import time
+
+
+# Forwarding-only connections have just a username; multiplexed connections
+# may list several terminals. Exclude bracketed listener/authentication titles.
+TITLE = re.compile(rb"sshd(?:-session)?: [^\s@\[\]]+(?:@(?:pts/[0-9]+(?:,pts/[0-9]+)*|notty))?")
+EXECUTABLES = {"sshd", "sshd-session"}
+
+
+def is_session(executable, command):
+    # OpenSSH overwrites argv[0]; ignore NUL padding, never search other args.
+    name = Path(executable.removesuffix(" (deleted)")).name
+    return name in EXECUTABLES and TITLE.fullmatch(command.split(b"\0", 1)[0]) is not None
+
+
+def sessions():
+    for entry in Path("/proc").iterdir():
+        if not entry.name.isdecimal():
+            continue
+        fd = None
+        try:
+            # Pin the process before inspecting it, so PID reuse cannot redirect
+            # the signal between inspection and delivery.
+            fd = os.pidfd_open(int(entry.name))
+            if is_session(os.readlink(entry / "exe"), (entry / "cmdline").read_bytes()):
+                yield int(entry.name), fd
+        except (FileNotFoundError, ProcessLookupError, PermissionError):
+            continue
+        finally:
+            if fd is not None:
+                os.close(fd)
+
+
+def cleanup(dry_run=False, timeout=5.0):
+    pending = select.poll()
+    handles = []
+    try:
+        for pid, fd in sessions():
+            if dry_run:
+                print(f"Would send SIGTERM to OpenSSH session {pid}", flush=True)
+                continue
+            try:
+                signal.pidfd_send_signal(fd, signal.SIGTERM)
+            except ProcessLookupError:
+                continue
+            print(f"Sent SIGTERM to OpenSSH session {pid}", flush=True)
+            retained = os.dup(fd)
+            handles.append(retained)
+            pending.register(retained, select.POLLIN)
+        remaining = set(handles)
+        deadline = time.monotonic() + timeout
+        while remaining:
+            delay = deadline - time.monotonic()
+            if delay <= 0:
+                print(f"{len(remaining)} session process(es) still exiting; continuing shutdown", flush=True)
+                break
+            for fd, _ in pending.poll(max(1, int(delay * 1000))):
+                pending.unregister(fd)
+                remaining.discard(fd)
+    finally:
+        for fd in handles:
+            os.close(fd)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--dry-run", action="store_true", help="list matching sessions without signaling them")
+    args = parser.parse_args()
+    if not args.dry_run and os.geteuid() != 0:
+        parser.error("cleanup requires root; use --dry-run to inspect accessible processes")
+    cleanup(args.dry_run)
+
+
+if __name__ == "__main__":
+    main()

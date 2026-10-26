@@ -1,0 +1,22 @@
+[Unit]
+Description=Disconnect OpenSSH sessions before network shutdown
+Documentation=file:/usr/share/doc/ssh-session-cleanup/README.md
+After=network.target
+# Stop listeners first, then existing connections, then networking.
+Before=sshd.service sshd.socket
+RefuseManualStop=yes
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/true
+ExecStop=/usr/lib/ssh-session-cleanup/ssh-session-cleanup
+TimeoutStopSec=10s
+UMask=0077
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target
