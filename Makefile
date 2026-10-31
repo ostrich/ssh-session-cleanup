@@ -20,6 +20,7 @@ install:
 	install -Dm644 README.md "$(DESTDIR)$(DOCDIR)/README.md"
 	install -Dm644 LICENSE "$(DESTDIR)$(LICENSEDIR)/LICENSE"
 	install -Dm644 ssh-session-cleanup.service "$(DESTDIR)$(UNITDIR)/ssh-session-cleanup.service"
+	install -Dm644 session-.scope.d/ssh-session-cleanup.conf "$(DESTDIR)$(UNITDIR)/session-.scope.d/ssh-session-cleanup.conf"
 	sed -i -e 's|^ExecStop=.*|ExecStop=$(LIBEXECDIR)/ssh-session-cleanup|' \
 	    -e 's|^Documentation=.*|Documentation=file:$(DOCDIR)/README.md|' \
 	    "$(DESTDIR)$(UNITDIR)/ssh-session-cleanup.service"
@@ -28,4 +29,5 @@ uninstall:
 	rm -f "$(DESTDIR)$(LIBEXECDIR)/ssh-session-cleanup" \
 	    "$(DESTDIR)$(DOCDIR)/README.md" \
 	    "$(DESTDIR)$(LICENSEDIR)/LICENSE" \
-	    "$(DESTDIR)$(UNITDIR)/ssh-session-cleanup.service"
+	    "$(DESTDIR)$(UNITDIR)/ssh-session-cleanup.service" \
+	    "$(DESTDIR)$(UNITDIR)/session-.scope.d/ssh-session-cleanup.conf"

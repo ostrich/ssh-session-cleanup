@@ -36,6 +36,9 @@ sudo systemctl disable ssh-session-cleanup.service
 
 The currently armed hook still runs at the next shutdown.
 
+After upgrading an existing installation, run `sudo systemctl daemon-reload`
+to apply unit and session-ordering changes. No service restart is needed.
+
 ## Uninstall a source installation
 
 Disable the service as above, then reboot before removing its files so the
@@ -59,6 +62,9 @@ races and waits up to five seconds; never sends SIGKILL.
 Interactive SSH terminals receive a best-effort notice before disconnection:
 “System is shutting down or rebooting. Your SSH connection will close now.”
 Noninteractive connections receive no terminal message; dry runs send no notice.
+
+An installed `session-.scope.d` drop-in ensures cleanup runs before systemd
+tears down login sessions, allowing the notice and disconnect to happen first.
 
 Requires Linux with pidfds, Python 3.9+, systemd and root access. Ordering is
 configured for `sshd.service`, `sshd.socket`, `ssh.service` and `ssh.socket`;
